@@ -37,8 +37,8 @@ async function fetchData() {
             fetch(PREV_API_URL)
         ]);
 
-        const data = res.status === 'fulfilled' ? await res.value.json() : [];
-        const prevData = prevRes.status === 'fulfilled' ? await prevRes.value.json() : [];
+        const data = (res.status === 'fulfilled' && res.value.ok) ? await res.value.json() : [];
+        const prevData = (prevRes.status === 'fulfilled' && prevRes.value.ok) ? await prevRes.value.json() : [];
 
         // 轉換前次資料為 Map 方便快速查詢
         prevDataMap = {};
