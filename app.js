@@ -56,10 +56,12 @@ async function fetchData() {
 
         dataMap = {}; dataRaw.forEach(d => dataMap[d.resultid] = parseInt(d.vote_count) || 0);
         prevDataMap = {}; prevRaw.forEach(d => prevDataMap[d.resultid] = parseInt(d.vote_count) || 0);
+        
+        // 原始資料排序
         liveData = liveRaw.sort((a, b) => (parseInt(b.vote_count) || 0) - (parseInt(a.vote_count) || 0));
         
         const groups = [...new Set(liveData.map(d => d.rgroup))].sort();
-        elements.groupFilter.innerHTML = '<option value="all">所有組別</option>' + 
+        elements.groupFilter.innerHTML = '<option value="all">所有組別 (總排行)</option>' + 
             groups.map(g => `<option value="${g}">${g}</option>`).join('');
 
         updateFollowCount();
@@ -89,17 +91,8 @@ function toggleFollow(id) {
     applyFilters();
 }
 
-function updateFollowCount() {
-    elements.followCount.innerText = followList.length;
-}
-
-function clearFollows() {
-    followList = [];
-    localStorage.removeItem('followList');
-    updateFollowCount();
-    renderMultiChart();
-    applyFilters();
-}
+function updateFollowCount() { elements.followCount.innerText = followList.length; }
+function clearFollows() { followList = []; localStorage.removeItem('followList'); updateFollowCount(); renderMultiChart(); applyFilters(); }
 
 function generateSparkline(id, currentVotes) {
     const pts = (historyMap[id] || []).map(p => p.v);
@@ -111,20 +104,36 @@ function generateSparkline(id, currentVotes) {
     return `<svg class="sparkline" viewBox="0 0 ${width} ${height + 4}"><polyline points="${coords}" /></svg>`;
 }
 
+// 核心邏輯：先算組內排名，再做搜尋過濾
 function applyFilters() {
     const term = elements.searchInput.value.toLowerCase();
     const group = elements.groupFilter.value;
-    const filtered = liveData.filter(d => 
-        (d.rtitle.toLowerCase().includes(term) || d.resultid.toLowerCase().includes(term)) &&
-        (group === 'all' || d.rgroup === group)
+
+    // 1. 先根據組別過濾並重新算排名
+    let rankBase = liveData;
+    if (group !== 'all') {
+        rankBase = liveData.filter(d => d.rgroup === group);
+    }
+    
+    // 為現有的組別加上臨時排名
+    const rankedData = rankBase.map((item, index) => ({
+        ...item,
+        tempRank: index + 1
+    }));
+
+    // 2. 根據搜尋字串二次過濾
+    const filtered = rankedData.filter(d => 
+        (d.rtitle.toLowerCase().includes(term) || d.resultid.toLowerCase().includes(term))
     );
+
     elements.totalWorks.innerText = filtered.length;
+    elements.updateTime.innerText = new Date().toLocaleTimeString();
     renderTable(filtered);
 }
 
 function renderTable(data) {
     elements.rankingBody.innerHTML = '';
-    data.forEach((item, index) => {
+    data.forEach((item) => {
         const cur = parseInt(item.vote_count) || 0;
         const growth1 = cur - (dataMap[item.resultid] || cur);
         const growth2 = (dataMap[item.resultid] || cur) - (prevDataMap[item.resultid] || (dataMap[item.resultid] || cur));
@@ -133,7 +142,7 @@ function renderTable(data) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="follow-col"><i class="fa-star ${isFollowed ? 'fas active' : 'far'}" onclick="toggleFollow('${item.resultid}')"></i></td>
-            <td><div class="rank-badge">${index + 1}</div></td>
+            <td><div class="rank-badge">${item.tempRank}</div></td>
             <td><div class="work-info"><span class="work-title">${item.rtitle}</span><span class="work-id"># ${item.resultid}</span></div></td>
             <td><span class="group-tag">${item.rgroup}</span></td>
             <td class="vote-col"><strong>${cur}</strong></td>
@@ -155,43 +164,18 @@ function renderTable(data) {
 function renderMultiChart() {
     const ctx = document.getElementById('multiTrendChart').getContext('2d');
     if (multiChart) multiChart.destroy();
-    
     elements.compareList.innerHTML = '';
     const datasets = followList.map((id, index) => {
         const work = liveData.find(d => d.resultid === id);
         const history = (historyMap[id] || []).sort((a,b) => a.t - b.t);
         const color = `hsl(${(index * 137) % 360}, 70%, 60%)`;
-        
         if (work) {
-            const tag = document.createElement('span');
-            tag.className = 'compare-tag';
-            tag.style.color = color;
-            tag.style.borderColor = color;
-            tag.innerText = work.rtitle;
+            const tag = document.createElement('span'); tag.className = 'compare-tag'; tag.style.color = color; tag.style.borderColor = color; tag.innerText = work.rtitle;
             elements.compareList.appendChild(tag);
         }
-
-        return {
-            label: work ? work.rtitle : id,
-            data: history.map(h => ({ x: h.t, y: h.v })),
-            borderColor: color,
-            tension: 0.3,
-            fill: false
-        };
+        return { label: work ? work.rtitle : id, data: history.map(h => ({ x: h.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), y: h.v })), borderColor: color, tension: 0.3, fill: false };
     });
-
-    multiChart = new Chart(ctx, {
-        type: 'line',
-        data: { datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { type: 'time', time: { unit: 'hour' }, grid: { display: false } },
-                y: { beginAtZero: false }
-            }
-        }
-    });
+    multiChart = new Chart(ctx, { type: 'line', data: { datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
 }
 
 async function showTrend(id, title) {
@@ -208,6 +192,5 @@ async function showTrend(id, title) {
         }
     });
 }
-
 function showLoader() { elements.loader.style.display = 'flex'; }
 function hideLoader() { elements.loader.style.display = 'none'; }
