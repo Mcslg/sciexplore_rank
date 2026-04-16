@@ -456,3 +456,47 @@ footer {
     font-size: 24px;
     cursor: pointer;
 }
+
+/* 趨勢小圖樣式 */
+.trend-col { width: 100px; text-align: center; }
+.sparkline {
+    width: 80px;
+    height: 30px;
+    stroke: #696cff;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 2px rgba(105, 108, 255, 0.4));
+}
+
+/* 分頁與關注樣式 */
+.tabs { display: flex; gap: 10px; margin-top: 20px; }
+.tab-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    padding: 10px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.tab-btn.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 0 15px rgba(105, 108, 255, 0.4);
+}
+
+.follow-col { width: 50px; text-align: center; }
+.follow-star { cursor: pointer; color: var(--text-muted); font-size: 1.2rem; transition: color 0.2s; }
+.follow-star.active { color: #ffab00; }
+
+.chart-container-large { padding: 20px; height: 400px; width: 100%; position: relative; }
+.compare-tags { display: flex; flex-wrap: wrap; gap: 8px; padding: 20px; }
+.compare-tag {
+    background: rgba(105, 108, 255, 0.1);
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    border: 1px solid rgba(105, 108, 255, 0.3);
+}

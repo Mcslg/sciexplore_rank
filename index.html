@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 科學探究競賽作品排行榜</title>
+    <title>2026 科學探究競賽排行榜</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -21,21 +20,21 @@
                 <i class="fas fa-microscope"></i>
                 <span>SCIENCE EXPO 2026</span>
             </div>
-            <h1>作品票數排行榜</h1>
-            <p class="subtitle">即時數據同步與排名分析</p>
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <span class="label">總參賽作品</span>
-                    <span id="total-works" class="value">--</span>
-                </div>
-                <div class="stat-item">
-                    <span class="label">最後更新時間</span>
-                    <span id="update-time" class="value">--</span>
-                </div>
+            <h1>作品觀測儀表板</h1>
+            
+            <!-- 分頁切換 -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('ranking')">
+                    <i class="fas fa-list-ol"></i> 即時排行
+                </button>
+                <button class="tab-btn" onclick="switchTab('compare')">
+                    <i class="fas fa-chart-line"></i> 關注對比 (<span id="follow-count">0</span>)
+                </button>
             </div>
         </header>
 
-        <main class="ranking-card">
+        <!-- 排行分頁 -->
+        <main id="ranking-view" class="tab-content active">
             <div class="card-header">
                 <div class="search-box">
                     <i class="fas fa-search"></i>
@@ -44,7 +43,6 @@
                 <div class="filter-box">
                     <select id="groupFilter" class="group-select">
                         <option value="all">所有組別</option>
-                        <!-- 選項將由 JS 動態生成 -->
                     </select>
                 </div>
                 <button id="refreshBtn" class="refresh-button">
@@ -53,34 +51,49 @@
             </div>
 
             <div class="table-container">
-                <table id="resultsTable">
+                <table>
                     <thead>
                         <tr>
+                            <th class="follow-col"><i class="far fa-star"></i></th>
                             <th class="rank-col">排名</th>
                             <th>作品資訊</th>
                             <th class="group-col">組別</th>
                             <th class="vote-col">目前票數</th>
-                            <th class="growth-col">15m增長</th>
+                            <th class="trend-col">趨勢圖</th>
+                            <th class="growth-col">票數增長 (即時 / 上期)</th>
                             <th class="action-col">功能</th>
                         </tr>
                     </thead>
-                    <tbody id="rankingBody">
-                        <!-- 資料將由 JS 動態生成 -->
-                    </tbody>
+                    <tbody id="rankingBody"></tbody>
                 </table>
             </div>
+        </main>
 
-            <div id="loader" class="loader-overlay">
-                <div class="spinner"></div>
-                <p>正在同步參賽作品資料...</p>
-            </div>
-
-            <div id="error-msg" class="error-overlay" style="display: none;">
-                <i class="fas fa-exclamation-circle"></i>
-                <p>無法連線至 API。這通常是因為瀏覽器的 CORS 限制。</p>
-                <button id="useMockData" class="btn-secondary">查看範例展示</button>
+        <!-- 對比分頁 -->
+        <main id="compare-view" class="tab-content" style="display: none;">
+            <div class="ranking-card">
+                <div class="card-header">
+                    <h3>關注作品趨勢對比</h3>
+                    <button class="btn-secondary" onclick="clearFollows()">清空關注</button>
+                </div>
+                <div class="chart-container-large">
+                    <canvas id="multiTrendChart"></canvas>
+                </div>
+                <div id="compare-list" class="compare-tags">
+                    <!-- 關注的作品標籤會出現在這 -->
+                </div>
             </div>
         </main>
+
+        <div id="loader" class="loader-overlay">
+            <div class="spinner"></div>
+            <p>正在同步數據...</p>
+        </div>
+
+        <div id="error-msg" class="error-overlay" style="display: none;">
+            <i class="fas fa-exclamation-circle"></i>
+            <p>無法連線至 API。請確認 Vercel Proxy 是否正常運作。</p>
+        </div>
 
         <footer>
             <p>© 2026 科學探究競賽 排行榜系統</p>
@@ -91,7 +104,7 @@
     <div id="trendModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">票數增長趨勢</h3>
+                <h3 id="modalTitle"></h3>
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
