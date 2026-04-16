@@ -500,3 +500,28 @@ footer {
     font-size: 0.85rem;
     border: 1px solid rgba(105, 108, 255, 0.3);
 }
+
+/* 學校資訊樣式 */
+.work-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.school-tag {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.school-tag i { font-size: 0.7rem; color: var(--primary); }
+
+/* 組別專屬配色 */
+.group-tag.group-elementary { background: rgba(76, 175, 80, 0.1); color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
+.group-tag.group-middle { background: rgba(33, 150, 243, 0.1); color: #2196f3; border-color: rgba(33, 150, 243, 0.3); }
+.group-tag.group-high { background: rgba(156, 39, 176, 0.1); color: #9c27b0; border-color: rgba(156, 39, 176, 0.3); }
+.group-tag.group-teacher { background: rgba(255, 152, 0, 0.1); color: #ff9800; border-color: rgba(255, 152, 0, 0.3); }
+
+/* 雙重增長排版微調 */
+.growth-container { display: flex; flex-direction: column; gap: 2px; }
+.growth-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+.growth-row small { color: var(--text-muted); min-width: 25px; }
