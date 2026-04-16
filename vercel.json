@@ -9,7 +9,8 @@
     { "src": "favicon.png", "use": "@vercel/static" },
     { "src": "apple-touch-icon.png", "use": "@vercel/static" },
     { "src": "robots.txt", "use": "@vercel/static" },
-    { "src": "sitemap.xml", "use": "@vercel/static" }
+    { "src": "sitemap.xml", "use": "@vercel/static" },
+    { "src": "google679209b253db6033.html", "use": "@vercel/static" }
   ],
   "rewrites": [
     { "source": "/favicon.ico", "destination": "/favicon.png" },
