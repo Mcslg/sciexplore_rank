@@ -405,3 +405,54 @@ footer {
     .card-header { flex-direction: column; align-items: stretch; }
     .group-col, .action-col { display: none; }
 }
+
+/* 新增功能樣式 */
+.growth-col { width: 120px; text-align: center; }
+.growth-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.growth-positive { background: rgba(113, 221, 55, 0.2); color: #71dd37; }
+.growth-zero { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+/* Modal 彈出視窗樣式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    padding: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+}
+
+.close {
+    color: var(--text-muted);
+    font-size: 24px;
+    cursor: pointer;
+}

@@ -1,4 +1,7 @@
 const API_URL = './data.json';
+const PREV_API_URL = './prev_data.json';
+const HISTORY_URL = './history.csv';
+
 const elements = {
     rankingBody: document.getElementById('rankingBody'),
     totalWorks: document.getElementById('total-works'),
@@ -8,129 +11,153 @@ const elements = {
     groupFilter: document.getElementById('groupFilter'),
     loader: document.getElementById('loader'),
     errorMsg: document.getElementById('error-msg'),
-    useMockDataBtn: document.getElementById('useMockData')
+    trendModal: document.getElementById('trendModal'),
+    modalTitle: document.getElementById('modalTitle'),
+    closeModal: document.querySelector('.close')
 };
 
 let allData = [];
+let prevDataMap = {};
+let currentChart = null;
+
+// 初始化
+window.onload = fetchData;
+elements.refreshBtn.addEventListener('click', fetchData);
+elements.searchInput.addEventListener('input', applyFilters);
+elements.groupFilter.addEventListener('change', applyFilters);
+elements.closeModal.onclick = () => elements.trendModal.style.display = 'none';
+window.onclick = (event) => { if (event.target == elements.trendModal) elements.trendModal.style.display = 'none'; };
 
 async function fetchData() {
     showLoader();
-    hideError();
-
     try {
-        const response = await fetch(API_URL);
+        // 同時抓取目前與前次資料
+        const [res, prevRes] = await Promise.allSettled([
+            fetch(API_URL),
+            fetch(PREV_API_URL)
+        ]);
 
-        if (!response.ok) throw new Error('Network response was not ok');
+        const data = res.status === 'fulfilled' ? await res.value.json() : [];
+        const prevData = prevRes.status === 'fulfilled' ? await prevRes.value.json() : [];
 
-        const data = await response.json();
+        // 轉換前次資料為 Map 方便快速查詢
+        prevDataMap = {};
+        prevData.forEach(item => {
+            prevDataMap[item.resultid] = parseInt(item.vote_count) || 0;
+        });
 
-        processAndRender(data);
-    } catch (error) {
-        console.error('Fetch error:', error);
-        showError();
+        allData = data.sort((a, b) => (parseInt(b.vote_count) || 0) - (parseInt(a.vote_count) || 0));
+        
+        // 更新組別篩選器
+        const groups = [...new Set(allData.map(d => d.rgroup))].sort();
+        const currentSelection = elements.groupFilter.value;
+        elements.groupFilter.innerHTML = '<option value="all">所有組別</option>' + 
+            groups.map(g => `<option value="${g}" ${g===currentSelection?'selected':''}>${g}</option>`).join('');
+
+        elements.updateTime.innerText = new Date().toLocaleTimeString();
+        applyFilters();
+    } catch (e) {
+        console.error(e);
+        document.getElementById('error-msg').style.display = 'flex';
     } finally {
         hideLoader();
     }
 }
 
-function processAndRender(data) {
-    if (!Array.isArray(data)) return;
-
-    // 按票數排序 (填補空票數為 0，並確保是數字)
-    allData = data.sort((a, b) => {
-        const countA = parseInt(a.vote_count) || 0;
-        const countB = parseInt(b.vote_count) || 0;
-        return countB - countA;
-    });
-
-    // 動態生成組別選項
-    const uniqueGroups = [...new Set(allData.map(item => item.rgroup))].sort();
-    elements.groupFilter.innerHTML = '<option value="all">所有組別</option>' + 
-        uniqueGroups.map(g => `<option value="${g}">${g}</option>`).join('');
-
-    elements.updateTime.innerText = new Date().toLocaleTimeString();
-    applyFilters();
-}
-
 function applyFilters() {
     const term = elements.searchInput.value.toLowerCase();
-    const selectedGroup = elements.groupFilter.value;
-
-    const filtered = allData.filter(item => {
-        const matchesSearch = item.rtitle.toLowerCase().includes(term) || 
-                             item.resultid.toLowerCase().includes(term);
-        const matchesGroup = selectedGroup === 'all' || item.rgroup === selectedGroup;
-        return matchesSearch && matchesGroup;
-    });
-
+    const group = elements.groupFilter.value;
+    const filtered = allData.filter(d => 
+        (d.rtitle.toLowerCase().includes(term) || d.resultid.toLowerCase().includes(term)) &&
+        (group === 'all' || d.rgroup === group)
+    );
     elements.totalWorks.innerText = filtered.length;
     renderTable(filtered);
 }
 
-function renderTable(dataToRender) {
+function renderTable(data) {
     elements.rankingBody.innerHTML = '';
+    data.forEach((item, index) => {
+        const currentVotes = parseInt(item.vote_count) || 0;
+        const prevVotes = prevDataMap[item.resultid] || currentVotes;
+        const growth = currentVotes - prevVotes;
 
-    dataToRender.forEach((item, index) => {
-        const rank = index + 1;
         const tr = document.createElement('tr');
-
         tr.innerHTML = `
-            <td>
-                <div class="rank-badge">${rank}</div>
-            </td>
+            <td><div class="rank-badge">${index + 1}</div></td>
             <td>
                 <div class="work-info">
                     <span class="work-title">${item.rtitle}</span>
                     <span class="work-id"># ${item.resultid}</span>
                 </div>
             </td>
-            <td class="group-col">
-                <span class="group-tag">${item.rgroup}</span>
-            </td>
-            <td class="vote-col">
-                <span class="vote-count">${item.vote_count}</span>
-                <small style="color: var(--text-muted); font-size: 0.7rem;"> 票</small>
+            <td><span class="group-tag">${item.rgroup}</span></td>
+            <td class="vote-col"><strong>${currentVotes}</strong> <small>票</small></td>
+            <td class="growth-col">
+                <span class="growth-badge ${growth > 0 ? 'growth-positive' : 'growth-zero'}">
+                    ${growth > 0 ? '+' : ''}${growth}
+                </span>
             </td>
             <td class="action-col">
-                <button class="btn-detail" onclick="window.open('https://sciexplore2026.colife.org.tw/work/detail.php?id=${item.resultid}', '_blank')">
+                <button class="btn-detail" onclick="showTrend('${item.resultid}', '${item.rtitle}')" title="查看趨勢">
+                    <i class="fas fa-chart-line"></i>
+                </button>
+                <button class="btn-detail" onclick="window.open('https://sciexplore2026.colife.org.tw/work/detail.php?id=${item.resultid}', '_blank')" title="官方頁面">
                     <i class="fas fa-external-link-alt"></i>
                 </button>
             </td>
         `;
-
         elements.rankingBody.appendChild(tr);
     });
 }
 
-function updateStats() {
-    elements.totalWorks.innerText = allData.length;
-    elements.updateTime.innerText = new Date().toLocaleTimeString();
+async function showTrend(id, title) {
+    elements.trendModal.style.display = 'flex';
+    elements.modalTitle.innerText = `${title} - 票數趨勢`;
+    
+    try {
+        const res = await fetch(HISTORY_URL);
+        const text = await res.text();
+        const lines = text.split('\n').slice(1); // 跳過標題列
+        
+        const historyData = lines
+            .map(line => line.split(','))
+            .filter(cols => cols[1] === id)
+            .map(cols => ({
+                t: new Date(cols[0]),
+                v: parseInt(cols[2])
+            }))
+            .sort((a, b) => a.t - b.t);
+
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        if (currentChart) currentChart.destroy();
+
+        currentChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: historyData.map(d => d.t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})),
+                datasets: [{
+                    label: '累計票數',
+                    data: historyData.map(d => d.v),
+                    borderColor: '#696cff',
+                    backgroundColor: 'rgba(105, 108, 255, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    } catch (e) {
+        console.error('無法讀取歷史資料', e);
+    }
 }
 
 function showLoader() { elements.loader.style.display = 'flex'; }
 function hideLoader() { elements.loader.style.display = 'none'; }
-function showError() { elements.errorMsg.style.display = 'flex'; }
-function hideError() { elements.errorMsg.style.display = 'none'; }
-
-// 搜尋與篩選事件
-elements.searchInput.addEventListener('input', applyFilters);
-elements.groupFilter.addEventListener('change', applyFilters);
-
-// 重整按鈕
-elements.refreshBtn.addEventListener('click', fetchData);
-
-// 模擬資料 (給被 CORS 擋住的情況預覽)
-elements.useMockDataBtn.addEventListener('click', () => {
-    const mockData = [
-        { resultid: 'E001', rgroup: '國小組', rtitle: '為什麼可樂會噴出來', vote_count: '1250' },
-        { resultid: 'J002', rgroup: '國中組', rtitle: '校園植物的多樣性研究', vote_count: '3420' },
-        { resultid: 'G003', rgroup: '普高組', rtitle: '人工智慧在農業的應用', vote_count: '2100' },
-        { resultid: 'T004', rgroup: '教師組', rtitle: '科學探究教學法初探', vote_count: '800' },
-        { resultid: 'S005', rgroup: '大專組', rtitle: '量子糾纏與加密通訊', vote_count: '4500' }
-    ];
-    hideError();
-    processAndRender(mockData);
-});
-
-// 初始化
-window.onload = fetchData;
