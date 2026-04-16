@@ -118,6 +118,57 @@ function parseHistoryTime(item) {
     return new Date(item.created_at || item.timestamp || item.time);
 }
 
+function formatChartTooltipTime(value) {
+    return new Date(value).toLocaleString([], {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getTimeScaleOptions() {
+    return {
+        type: 'time',
+        time: {
+            tooltipFormat: 'M/d HH:mm',
+            displayFormats: {
+                minute: 'HH:mm',
+                hour: 'M/d HH:mm',
+                day: 'M/d'
+            }
+        },
+        ticks: {
+            autoSkip: true,
+            maxRotation: 0,
+            callback(value) {
+                return formatChartTooltipTime(value);
+            }
+        }
+    };
+}
+
+function getTimeChartOptions() {
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        parsing: false,
+        scales: {
+            x: getTimeScaleOptions()
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    title(items) {
+                        if (!items.length) return '';
+                        return formatChartTooltipTime(items[0].parsed.x);
+                    }
+                }
+            }
+        }
+    };
+}
+
 function setChartStatus(target, message) {
     const status = document.getElementById(target);
     if (status) status.innerText = message || '';
@@ -251,7 +302,7 @@ async function renderMultiChart() {
             const history = results[index]
                 .map(d => ({ t: parseHistoryTime(d), y: parseInt(d.vote_count, 10) || 0 }))
                 .filter(d => !Number.isNaN(d.t.getTime()))
-                .map(d => ({ x: d.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), y: d.y }));
+                .map(d => ({ x: d.t.getTime(), y: d.y }));
             const color = `hsl(${(index * 137) % 360}, 70%, 60%)`;
             if (work) {
                 const tag = document.createElement('span'); tag.className = 'compare-tag'; tag.style.color = color; tag.style.borderColor = color; tag.innerText = work.rtitle;
@@ -262,7 +313,7 @@ async function renderMultiChart() {
         if (!datasets.some(dataset => dataset.data.length)) {
             setChartStatus('compareChartStatus', '目前還沒有可繪製的歷史資料。');
         }
-        multiChart = new Chart(ctx, { type: 'line', data: { datasets }, options: { responsive: true, maintainAspectRatio: false } });
+        multiChart = new Chart(ctx, { type: 'line', data: { datasets }, options: getTimeChartOptions() });
     } catch (e) {
         console.error('對比圖載入失敗', e);
         elements.compareList.innerHTML = '<p>讀取失敗</p>';
@@ -303,10 +354,16 @@ async function showTrend(id, title) {
         currentChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: processed.map(d => d.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})),
-                datasets: [{ label: '票數', data: processed.map(d => d.v), borderColor: '#696cff', backgroundColor: 'rgba(105, 108, 255, 0.2)', tension: 0.4, pointRadius: 4 }]
+                datasets: [{
+                    label: '票數',
+                    data: processed.map(d => ({ x: d.t.getTime(), y: d.v })),
+                    borderColor: '#696cff',
+                    backgroundColor: 'rgba(105, 108, 255, 0.2)',
+                    tension: 0.4,
+                    pointRadius: 4
+                }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: getTimeChartOptions()
         });
     } catch (e) {
         console.error('圖表載入失敗', e);
