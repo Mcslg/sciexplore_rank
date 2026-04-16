@@ -5,10 +5,14 @@
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "style.css", "use": "@vercel/static" },
     { "src": "ranking.js", "use": "@vercel/static" },
-    { "src": "icon.png", "use": "@vercel/static" }
+    { "src": "icon.png", "use": "@vercel/static" },
+    { "src": "favicon.png", "use": "@vercel/static" },
+    { "src": "apple-touch-icon.png", "use": "@vercel/static" },
+    { "src": "robots.txt", "use": "@vercel/static" },
+    { "src": "sitemap.xml", "use": "@vercel/static" }
   ],
   "rewrites": [
-    { "source": "/favicon.ico", "destination": "/icon.png" },
+    { "source": "/favicon.ico", "destination": "/favicon.png" },
     { "source": "/api/proxy", "destination": "api/proxy.js" },
     { "source": "/api/track", "destination": "api/track.js" },
     { "source": "/api/compact", "destination": "api/compact.js" },
