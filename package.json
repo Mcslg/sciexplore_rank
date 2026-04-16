@@ -2,6 +2,9 @@
   "name": "science-expo-ranking",
   "version": "1.0.0",
   "description": "2026 科學探究競賽排行榜",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
   "dependencies": {
     "axios": "^1.6.0",
     "@supabase/supabase-js": "^2.39.0"

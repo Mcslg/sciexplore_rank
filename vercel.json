@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "builds": [
+    { "src": "api/*.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "style.css", "use": "@vercel/static" },
+    { "src": "ranking.js", "use": "@vercel/static" }
+  ],
   "rewrites": [
     { "source": "/api/proxy", "destination": "api/proxy.js" },
     { "source": "/api/track", "destination": "api/track.js" },
