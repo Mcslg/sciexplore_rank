@@ -4,9 +4,6 @@ on:
   schedule:
     - cron: '7,22,37,52 * * * *'  # 每 15 分鐘執行一次
   workflow_dispatch:        # 允許手動觸發
-  push:
-    branches:
-      - main
 
 permissions:
   contents: write
