@@ -1,4 +1,4 @@
-const API_URL = './data.json';
+const API_URL = '/api/proxy';
 const PREV_API_URL = './prev_data.json';
 const HISTORY_URL = './history.csv';
 
