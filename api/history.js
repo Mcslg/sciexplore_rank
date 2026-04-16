@@ -5,6 +5,20 @@ const supabase = createClient(
     'sb_publishable_5AIk0L_JevietDyF9_7w1w_oHBLmIO9'
 );
 
+async function fetchAll(buildQuery) {
+    const pageSize = 1000;
+    let from = 0;
+    const rows = [];
+
+    while (true) {
+        const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+        if (error) throw error;
+        rows.push(...data);
+        if (data.length < pageSize) return rows;
+        from += pageSize;
+    }
+}
+
 function buildSparkline(data) {
     const sparkMap = {};
     data.forEach(item => {
@@ -20,10 +34,11 @@ module.exports = async (req, res) => {
     try {
         if (mode === 'sparkline') {
             const twoHoursAgo = new Date(Date.now() - 120 * 60 * 1000).toISOString();
-            const { data, error } = await supabase
-                .from('votes').select('resultid, vote_count, created_at')
-                .gt('created_at', twoHoursAgo).order('created_at', { ascending: true });
-            if (error) throw error;
+            const data = await fetchAll(() => supabase
+                .from('votes')
+                .select('resultid, vote_count, created_at')
+                .gt('created_at', twoHoursAgo)
+                .order('created_at', { ascending: true }));
             return res.status(200).json(buildSparkline(data));
         }
 
@@ -34,11 +49,11 @@ module.exports = async (req, res) => {
             const lookback = new Date(now - 90 * 60 * 1000).toISOString();
 
             // 抓足夠長的歷史，才能找出「15 分鐘前」和「30 分鐘前」各自最近的一筆。
-            const { data, error } = await supabase
-                .from('votes').select('resultid, vote_count, created_at')
-                .gte('created_at', lookback).order('created_at', { ascending: false });
-
-            if (error) throw error;
+            const data = await fetchAll(() => supabase
+                .from('votes')
+                .select('resultid, vote_count, created_at')
+                .gte('created_at', lookback)
+                .order('created_at', { ascending: false }));
 
             const map15m = {};
             const map30m = {};
@@ -61,10 +76,11 @@ module.exports = async (req, res) => {
         }
 
         if (id) {
-            const { data, error } = await supabase
-                .from('votes').select('vote_count, created_at')
-                .eq('resultid', id).order('created_at', { ascending: true });
-            if (error) throw error;
+            const data = await fetchAll(() => supabase
+                .from('votes')
+                .select('vote_count, created_at')
+                .eq('resultid', id)
+                .order('created_at', { ascending: true }));
             return res.status(200).json(data);
         }
         res.status(400).json({ error: 'Missing params' });

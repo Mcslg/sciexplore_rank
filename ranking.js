@@ -123,13 +123,29 @@ function setChartStatus(target, message) {
     if (status) status.innerText = message || '';
 }
 
+function getFallbackTrendValues(id, currentVotes) {
+    const last15 = getSnapshotValue(dataMap15, id, currentVotes);
+    const last30 = getSnapshotValue(dataMap30, id, last15);
+    return [last30, last15, currentVotes];
+}
+
+function normalizeTrendValues(values) {
+    return values
+        .map(v => parseInt(v, 10))
+        .filter(v => Number.isFinite(v));
+}
+
 function generateSparkline(id, currentVotes) {
-    const points = (historyMap[id] || []).map(v => parseInt(v, 10) || 0);
-    if (points.length < 2) return '';
-    const data = [...points, currentVotes].slice(-10);
+    const historyPoints = normalizeTrendValues(historyMap[id] || []);
+    const data = (historyPoints.length >= 2 ? [...historyPoints, currentVotes] : getFallbackTrendValues(id, currentVotes)).slice(-10);
+    if (data.length < 2) return '';
+
     const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
-    const width = 80, height = 26, step = width / (data.length - 1);
-    const coords = data.map((v, i) => `${i * step},${height - ((v - min) / range * height) + 2}`).join(' ');
+    const width = 80, height = 26, padding = 3, step = width / (data.length - 1);
+    const coords = data.map((v, i) => {
+        const y = padding + (height - padding * 2) - ((v - min) / range * (height - padding * 2));
+        return `${i * step},${y}`;
+    }).join(' ');
     return `<svg class="sparkline" viewBox="0 0 ${width} ${height + 4}"><polyline points="${coords}" /></svg>`;
 }
 
@@ -272,7 +288,12 @@ async function showTrend(id, title) {
             .sort((a,b) => a.t - b.t);
         if (!processed.length) {
             const work = liveData.find(item => item.resultid === id);
-            if (work) processed.push({ t: new Date(), v: parseInt(work.vote_count, 10) || 0 });
+            if (work) {
+                const now = Date.now();
+                getFallbackTrendValues(id, parseInt(work.vote_count, 10) || 0).forEach((value, index) => {
+                    processed.push({ t: new Date(now - (2 - index) * 15 * 60 * 1000), v: value });
+                });
+            }
             setChartStatus('trendChartStatus', '目前只有即時票數，累積更多紀錄後會顯示完整趨勢。');
         } else {
             setChartStatus('trendChartStatus', '');
