@@ -1,4 +1,4 @@
-const API_URL = '/api/proxy';
+const API_URL = './data.json';
 const elements = {
     rankingBody: document.getElementById('rankingBody'),
     totalWorks: document.getElementById('total-works'),
@@ -18,22 +18,11 @@ async function fetchData() {
     hideError();
 
     try {
-        // 使用 URLSearchParams 來模擬 form data (application/x-www-form-urlencoded)
-        const params = new URLSearchParams();
-        params.append('type', 'all');
-
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: params,
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        });
+        const response = await fetch(API_URL);
 
         if (!response.ok) throw new Error('Network response was not ok');
 
-        const result = await response.json();
-        const data = result[0]; // 根據您之前的程式碼，資料在索引 0
+        const data = await response.json();
 
         processAndRender(data);
     } catch (error) {
