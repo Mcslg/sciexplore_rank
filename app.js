@@ -154,7 +154,12 @@ function renderTable(data) {
                 </div>
             </td>
             <td class="action-col">
-                <button class="btn-detail" onclick="showTrend('${item.resultid}', '${item.rtitle}')"><i class="fas fa-chart-line"></i></button>
+                <button class="btn-detail" onclick="showTrend('${item.resultid}', '${item.rtitle}')" title="查看趨勢">
+                    <i class="fas fa-chart-line"></i>
+                </button>
+                <button class="btn-detail" onclick="window.open('https://sciexplore2026.colife.org.tw/work/detail.php?id=${item.resultid}', '_blank')" title="查看官方詳情">
+                    <i class="fas fa-external-link-alt"></i>
+                </button>
             </td>
         `;
         elements.rankingBody.appendChild(tr);
