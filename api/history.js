@@ -5,6 +5,15 @@ const supabase = createClient(
     'sb_publishable_5AIk0L_JevietDyF9_7w1w_oHBLmIO9'
 );
 
+function buildSparkline(data) {
+    const sparkMap = {};
+    data.forEach(item => {
+        if (!sparkMap[item.resultid]) sparkMap[item.resultid] = [];
+        sparkMap[item.resultid].push(item.vote_count);
+    });
+    return sparkMap;
+}
+
 module.exports = async (req, res) => {
     const { id, mode } = req.query;
 
@@ -15,12 +24,7 @@ module.exports = async (req, res) => {
                 .from('votes').select('resultid, vote_count, created_at')
                 .gt('created_at', twoHoursAgo).order('created_at', { ascending: true });
             if (error) throw error;
-            const sparkMap = {};
-            data.forEach(item => {
-                if (!sparkMap[item.resultid]) sparkMap[item.resultid] = [];
-                sparkMap[item.resultid].push(item.vote_count);
-            });
-            return res.status(200).json(sparkMap);
+            return res.status(200).json(buildSparkline(data));
         }
 
         if (mode === 'snapshot') {

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2026 科學探究競賽排行榜</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -90,6 +92,7 @@
                 </div>
                 <div class="chart-container-large">
                     <canvas id="multiTrendChart"></canvas>
+                    <p id="compareChartStatus" class="chart-status"></p>
                 </div>
                 <div id="compare-list" class="compare-tags">
                     <!-- 關注的作品標籤會出現在這 -->
@@ -121,6 +124,7 @@
             </div>
             <div class="modal-body">
                 <canvas id="trendChart"></canvas>
+                <p id="trendChartStatus" class="chart-status"></p>
             </div>
         </div>
     </div>

@@ -104,6 +104,25 @@ function getSnapshotValue(map, id, fallback) {
     return fallback;
 }
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function parseHistoryTime(item) {
+    return new Date(item.created_at || item.timestamp || item.time);
+}
+
+function setChartStatus(target, message) {
+    const status = document.getElementById(target);
+    if (status) status.innerText = message || '';
+}
+
 function generateSparkline(id, currentVotes) {
     const points = (historyMap[id] || []).map(v => parseInt(v, 10) || 0);
     if (points.length < 2) return '';
@@ -144,18 +163,18 @@ function renderTable(data) {
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="follow-col"><i class="fa-star ${isFollowed ? 'fas active' : 'far'}" onclick="toggleFollow('${item.resultid}')"></i></td>
+            <td class="follow-col"><i class="fa-star follow-star ${isFollowed ? 'fas active' : 'far'}" title="加入關注"></i></td>
             <td><div class="rank-badge">${item.tempRank}</div></td>
             <td>
                 <div class="work-info">
-                    <span class="work-title">${item.rtitle}</span>
+                    <span class="work-title">${escapeHtml(item.rtitle)}</span>
                     <div class="work-meta">
-                        <span class="work-id"># ${item.resultid}</span>
-                        <span class="school-tag"><i class="fas fa-school"></i> ${schoolName}</span>
+                        <span class="work-id"># ${escapeHtml(item.resultid)}</span>
+                        <span class="school-tag"><i class="fas fa-school"></i> ${escapeHtml(schoolName)}</span>
                     </div>
                 </div>
             </td>
-            <td><span class="group-tag ${getGroupColorClass(item.rgroup)}">${item.rgroup}</span></td>
+            <td><span class="group-tag ${getGroupColorClass(item.rgroup)}">${escapeHtml(item.rgroup)}</span></td>
             <td class="vote-col"><strong>${cur}</strong></td>
             <td class="trend-col">${generateSparkline(item.resultid, cur)}</td>
             <td class="growth-col">
@@ -165,10 +184,15 @@ function renderTable(data) {
                 </div>
             </td>
             <td class="action-col">
-                <button class="btn-detail" onclick="showTrend('${item.resultid}', '${item.rtitle}')" title="趨勢圖"><i class="fas fa-chart-line"></i></button>
-                <button class="btn-detail" onclick="window.open('https://sciexplore2026.colife.org.tw/work/detail.php?id=${item.resultid}', '_blank')" title="官網詳情"><i class="fas fa-external-link-alt"></i></button>
+                <button class="btn-detail btn-trend" title="趨勢圖"><i class="fas fa-chart-line"></i></button>
+                <button class="btn-detail btn-official" title="官網詳情"><i class="fas fa-external-link-alt"></i></button>
             </td>
         `;
+        tr.querySelector('.follow-star').addEventListener('click', () => toggleFollow(item.resultid));
+        tr.querySelector('.btn-trend').addEventListener('click', () => showTrend(item.resultid, item.rtitle));
+        tr.querySelector('.btn-official').addEventListener('click', () => {
+            window.open(`https://sciexplore2026.colife.org.tw/work/detail.php?id=${encodeURIComponent(item.resultid)}`, '_blank');
+        });
         elements.rankingBody.appendChild(tr);
     });
 }
@@ -196,6 +220,11 @@ function clearFollows() { followList = []; localStorage.removeItem('followList')
 async function renderMultiChart() {
     const ctx = document.getElementById('multiTrendChart').getContext('2d');
     if (multiChart) multiChart.destroy();
+    setChartStatus('compareChartStatus', '');
+    if (typeof Chart === 'undefined') {
+        setChartStatus('compareChartStatus', '圖表套件載入失敗，請重新整理頁面。');
+        return;
+    }
     elements.compareList.innerHTML = '<p>載入對比中...</p>';
     try {
         const promises = followList.map(id => fetch(`${HISTORY_API}?id=${id}`).then(res => res.json()));
@@ -203,39 +232,65 @@ async function renderMultiChart() {
         elements.compareList.innerHTML = '';
         const datasets = followList.map((id, index) => {
             const work = liveData.find(d => d.resultid === id);
-            const history = results[index].map(d => ({ x: new Date(d.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), y: parseInt(d.vote_count, 10) || 0 }));
+            const history = results[index]
+                .map(d => ({ t: parseHistoryTime(d), y: parseInt(d.vote_count, 10) || 0 }))
+                .filter(d => !Number.isNaN(d.t.getTime()))
+                .map(d => ({ x: d.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), y: d.y }));
             const color = `hsl(${(index * 137) % 360}, 70%, 60%)`;
             if (work) {
                 const tag = document.createElement('span'); tag.className = 'compare-tag'; tag.style.color = color; tag.style.borderColor = color; tag.innerText = work.rtitle;
                 elements.compareList.appendChild(tag);
             }
-            return { label: work ? work.rtitle : id, data: history, borderColor: color, tension: 0.3, fill: false };
+            return { label: work ? work.rtitle : id, data: history, borderColor: color, tension: 0.3, fill: false, pointRadius: 3 };
         });
+        if (!datasets.some(dataset => dataset.data.length)) {
+            setChartStatus('compareChartStatus', '目前還沒有可繪製的歷史資料。');
+        }
         multiChart = new Chart(ctx, { type: 'line', data: { datasets }, options: { responsive: true, maintainAspectRatio: false } });
-    } catch (e) { elements.compareList.innerHTML = '<p>讀取失敗</p>'; }
+    } catch (e) {
+        console.error('對比圖載入失敗', e);
+        elements.compareList.innerHTML = '<p>讀取失敗</p>';
+        setChartStatus('compareChartStatus', '讀取趨勢資料失敗。');
+    }
 }
 
 async function showTrend(id, title) {
     elements.trendModal.style.display = 'flex';
     elements.modalTitle.innerText = title;
+    setChartStatus('trendChartStatus', '載入趨勢資料中...');
     try {
+        if (typeof Chart === 'undefined') {
+            setChartStatus('trendChartStatus', '圖表套件載入失敗，請重新整理頁面。');
+            return;
+        }
         const res = await fetch(`${HISTORY_API}?id=${id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const historyData = await res.json();
         const processed = historyData
-            .map(d => ({ t: new Date(d.created_at), v: parseInt(d.vote_count, 10) || 0 }))
+            .map(d => ({ t: parseHistoryTime(d), v: parseInt(d.vote_count, 10) || 0 }))
             .filter(d => !Number.isNaN(d.t.getTime()))
             .sort((a,b) => a.t - b.t);
+        if (!processed.length) {
+            const work = liveData.find(item => item.resultid === id);
+            if (work) processed.push({ t: new Date(), v: parseInt(work.vote_count, 10) || 0 });
+            setChartStatus('trendChartStatus', '目前只有即時票數，累積更多紀錄後會顯示完整趨勢。');
+        } else {
+            setChartStatus('trendChartStatus', '');
+        }
         const ctx = document.getElementById('trendChart').getContext('2d');
         if (currentChart) currentChart.destroy();
         currentChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: processed.map(d => d.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})),
-                datasets: [{ label: '票數', data: processed.map(d => d.v), borderColor: '#696cff', tension: 0.4 }]
+                datasets: [{ label: '票數', data: processed.map(d => d.v), borderColor: '#696cff', backgroundColor: 'rgba(105, 108, 255, 0.2)', tension: 0.4, pointRadius: 4 }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
-    } catch (e) { console.error('圖表載入失敗', e); }
+    } catch (e) {
+        console.error('圖表載入失敗', e);
+        setChartStatus('trendChartStatus', '讀取趨勢資料失敗，請稍後再試。');
+    }
 }
 
 function showLoader() { elements.loader.style.display = 'flex'; }

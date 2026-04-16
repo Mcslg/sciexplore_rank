@@ -461,6 +461,17 @@ footer {
     height: 100%;
 }
 
+.chart-status {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 12px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+    pointer-events: none;
+}
+
 .close {
     color: var(--text-muted);
     font-size: 24px;
