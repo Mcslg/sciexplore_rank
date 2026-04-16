@@ -1,0 +1,33 @@
+name: Test Schedule
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Show trigger info
+        run: |
+          echo "event_name=${{ github.event_name }}"
+          echo "schedule=${{ github.event.schedule }}"
+          echo "ref=${{ github.ref }}"
+          echo "sha=${{ github.sha }}"
+          echo "repository=${{ github.repository }}"
+          echo "actor=${{ github.actor }}"
+
+      - name: Show time
+        run: |
+          echo "UTC time:"
+          date -u
+          echo "Taipei time:"
+          TZ=Asia/Taipei date
+
+      - name: Done
+        run: echo "schedule test finished"
