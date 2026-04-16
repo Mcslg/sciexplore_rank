@@ -2,14 +2,7 @@
   "name": "science-expo-ranking",
   "version": "1.0.0",
   "description": "2026 科學探究競賽排行榜",
-  "main": "server.js",
   "dependencies": {
-    "axios": "^1.6.0",
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
-  },
-  "scripts": {
-    "start": "node server.js",
-    "dev": "vercel dev"
+    "axios": "^1.6.0"
   }
 }
