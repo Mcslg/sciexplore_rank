@@ -73,8 +73,39 @@ function getGroupColorClass(group) {
     return '';
 }
 
+function parseTeamJson(value) {
+    if (!value) return null;
+    if (typeof value === 'object') return value;
+    try {
+        return JSON.parse(value);
+    } catch (e) {
+        return null;
+    }
+}
+
+function getSchoolName(item) {
+    if (item.rschool) return item.rschool;
+
+    const studentTeam = parseTeamJson(item.team_std || item[6]);
+    const teacherTeam = parseTeamJson(item.team_teacher || item[5]);
+    const candidates = [
+        ...(studentTeam?.std || []),
+        ...(teacherTeam?.teach || [])
+    ];
+
+    const schools = [...new Set(candidates.map(person => person.schoolName).filter(Boolean))];
+    return schools.join('、') || '未提供';
+}
+
+function getSnapshotValue(map, id, fallback) {
+    if (map && Object.prototype.hasOwnProperty.call(map, id)) {
+        return parseInt(map[id], 10) || 0;
+    }
+    return fallback;
+}
+
 function generateSparkline(id, currentVotes) {
-    const points = historyMap[id] || [];
+    const points = (historyMap[id] || []).map(v => parseInt(v, 10) || 0);
     if (points.length < 2) return '';
     const data = [...points, currentVotes].slice(-10);
     const min = Math.min(...data), max = Math.max(...data), range = max - min || 1;
@@ -88,7 +119,12 @@ function applyFilters() {
     const group = elements.groupFilter.value;
     let rankBase = (group === 'all') ? liveData : liveData.filter(d => d.rgroup === group);
     const rankedData = rankBase.map((item, index) => ({ ...item, tempRank: index + 1 }));
-    const filtered = rankedData.filter(d => d.rtitle.toLowerCase().includes(term) || d.resultid.toLowerCase().includes(term) || (d.rschool && d.rschool.toLowerCase().includes(term)));
+    const filtered = rankedData.filter(d => {
+        const schoolName = getSchoolName(d).toLowerCase();
+        return d.rtitle.toLowerCase().includes(term) ||
+            d.resultid.toLowerCase().includes(term) ||
+            schoolName.includes(term);
+    });
     elements.totalWorks.innerText = filtered.length;
     renderTable(filtered);
 }
@@ -97,8 +133,9 @@ function renderTable(data) {
     elements.rankingBody.innerHTML = '';
     data.forEach((item) => {
         const cur = parseInt(item.vote_count) || 0;
-        const last15 = dataMap15[item.resultid] || cur;
-        const last30 = dataMap30[item.resultid] || last15;
+        const last15 = getSnapshotValue(dataMap15, item.resultid, cur);
+        const last30 = getSnapshotValue(dataMap30, item.resultid, last15);
+        const schoolName = getSchoolName(item);
 
         const growthLive = cur - last15;
         const growthPrev = last15 - last30;
@@ -114,7 +151,7 @@ function renderTable(data) {
                     <span class="work-title">${item.rtitle}</span>
                     <div class="work-meta">
                         <span class="work-id"># ${item.resultid}</span>
-                        <span class="school-tag"><i class="fas fa-school"></i> ${item.rschool || '未提供'}</span>
+                        <span class="school-tag"><i class="fas fa-school"></i> ${schoolName}</span>
                     </div>
                 </div>
             </td>
@@ -166,7 +203,7 @@ async function renderMultiChart() {
         elements.compareList.innerHTML = '';
         const datasets = followList.map((id, index) => {
             const work = liveData.find(d => d.resultid === id);
-            const history = results[index].map(d => ({ x: new Date(d.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), y: d.vote_count }));
+            const history = results[index].map(d => ({ x: new Date(d.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), y: parseInt(d.vote_count, 10) || 0 }));
             const color = `hsl(${(index * 137) % 360}, 70%, 60%)`;
             if (work) {
                 const tag = document.createElement('span'); tag.className = 'compare-tag'; tag.style.color = color; tag.style.borderColor = color; tag.innerText = work.rtitle;
@@ -184,7 +221,10 @@ async function showTrend(id, title) {
     try {
         const res = await fetch(`${HISTORY_API}?id=${id}`);
         const historyData = await res.json();
-        const processed = historyData.map(d => ({ t: new Date(d.created_at), v: d.vote_count })).sort((a,b) => a.t - b.t);
+        const processed = historyData
+            .map(d => ({ t: new Date(d.created_at), v: parseInt(d.vote_count, 10) || 0 }))
+            .filter(d => !Number.isNaN(d.t.getTime()))
+            .sort((a,b) => a.t - b.t);
         const ctx = document.getElementById('trendChart').getContext('2d');
         if (currentChart) currentChart.destroy();
         currentChart = new Chart(ctx, {
@@ -192,7 +232,8 @@ async function showTrend(id, title) {
             data: {
                 labels: processed.map(d => d.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})),
                 datasets: [{ label: '票數', data: processed.map(d => d.v), borderColor: '#696cff', tension: 0.4 }]
-            }
+            },
+            options: { responsive: true, maintainAspectRatio: false }
         });
     } catch (e) { console.error('圖表載入失敗', e); }
 }

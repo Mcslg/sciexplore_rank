@@ -24,31 +24,32 @@ module.exports = async (req, res) => {
         }
 
         if (mode === 'snapshot') {
-            // 同時撈出 15m 前與 30m 前的紀錄
-            const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-            const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+            const now = Date.now();
+            const fifteenMinsAgo = new Date(now - 15 * 60 * 1000).toISOString();
+            const thirtyMinsAgo = new Date(now - 30 * 60 * 1000).toISOString();
+            const lookback = new Date(now - 90 * 60 * 1000).toISOString();
 
-            // 抓取 30 分鐘內的所有紀錄
+            // 抓足夠長的歷史，才能找出「15 分鐘前」和「30 分鐘前」各自最近的一筆。
             const { data, error } = await supabase
                 .from('votes').select('resultid, vote_count, created_at')
-                .gt('created_at', thirtyMinsAgo).order('created_at', { ascending: false });
+                .gte('created_at', lookback).order('created_at', { ascending: false });
 
             if (error) throw error;
 
             const map15m = {};
             const map30m = {};
+            const time15 = new Date(fifteenMinsAgo).getTime();
+            const time30 = new Date(thirtyMinsAgo).getTime();
 
             data.forEach(item => {
                 const itemTime = new Date(item.created_at).getTime();
-                const time15 = new Date(fifteenMinsAgo).getTime();
+                const voteCount = parseInt(item.vote_count, 10) || 0;
                 
-                // 如果這筆是在 15m 之前的最新一筆，就當 15m 快照
                 if (itemTime < time15 && !map15m[item.resultid]) {
-                    map15m[item.resultid] = item.vote_count;
+                    map15m[item.resultid] = voteCount;
                 }
-                // 最新一筆超過 30m 之前的，不論如何都當 30m 快照的一個參考
-                if (!map30m[item.resultid]) {
-                    map30m[item.resultid] = item.vote_count;
+                if (itemTime < time30 && !map30m[item.resultid]) {
+                    map30m[item.resultid] = voteCount;
                 }
             });
 
