@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
+const { compactOldVotes } = require('./compact-utils');
 
 const supabase = createClient(
     'https://bazcoiuhgbgyyhfggjhv.supabase.co',
@@ -28,7 +29,20 @@ module.exports = async (req, res) => {
         
         if (error) throw error;
 
-        res.status(200).json({ success: true, count: votesToInsert.length, time: new Date().toISOString() });
+        let compact = null;
+        try {
+            compact = await compactOldVotes(supabase);
+        } catch (compactError) {
+            console.error('Compact Error:', compactError.message);
+            compact = { success: false, error: compactError.message };
+        }
+
+        res.status(200).json({
+            success: true,
+            count: votesToInsert.length,
+            time: new Date().toISOString(),
+            compact
+        });
     } catch (error) {
         console.error('Tracking Error:', error.message);
         res.status(500).json({ error: error.message });

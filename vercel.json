@@ -13,8 +13,5 @@
     { "source": "/api/track", "destination": "api/track.js" },
     { "source": "/api/compact", "destination": "api/compact.js" },
     { "source": "/api/history", "destination": "api/history.js" }
-  ],
-  "crons": [
-    { "path": "/api/compact", "schedule": "0 * * * *" }
   ]
 }
