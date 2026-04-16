@@ -1,7 +1,5 @@
 const API_URL = '/api/proxy';
-const DATA_URL = './data.json';
-const PREV_URL = './prev_data.json';
-const HISTORY_URL = './history.csv';
+const HISTORY_API = '/api/history';
 
 const elements = {
     rankingBody: document.getElementById('rankingBody'),
@@ -36,26 +34,18 @@ elements.closeModal.onclick = () => elements.trendModal.style.display = 'none';
 async function fetchData() {
     showLoader();
     try {
-        const [resLive, resData, resPrev, resHistory] = await Promise.allSettled([
-            fetch(API_URL), fetch(DATA_URL), fetch(PREV_URL), fetch(HISTORY_URL)
+        const [resLive, resHistory] = await Promise.allSettled([
+            fetch(API_URL),
+            fetch(`${HISTORY_API}?mode=snapshot`)
         ]);
+
         const liveRaw = (resLive.status === 'fulfilled' && resLive.value.ok) ? await resLive.value.json() : [];
-        const dataRaw = (resData.status === 'fulfilled' && resData.value.ok) ? await resData.value.json() : [];
-        const prevRaw = (resPrev.status === 'fulfilled' && resPrev.value.ok) ? await resPrev.value.json() : [];
-        const historyText = (resHistory.status === 'fulfilled' && resHistory.value.ok) ? await resHistory.value.text() : '';
+        const snapshotMap = (resHistory.status === 'fulfilled' && resHistory.value.ok) ? await resHistory.value.json() : {};
 
-        historyMap = {};
-        if (historyText) {
-            historyText.split('\n').slice(1).forEach(line => {
-                const [time, id, count] = line.split(',');
-                if (!id) return;
-                if (!historyMap[id]) historyMap[id] = [];
-                historyMap[id].push({ t: new Date(time), v: parseInt(count) || 0 });
-            });
-        }
+        prevDataMap = snapshotMap;
+        dataMap = snapshotMap; 
 
-        dataMap = {}; dataRaw.forEach(d => dataMap[d.resultid] = parseInt(d.vote_count) || 0);
-        prevDataMap = {}; prevRaw.forEach(d => prevDataMap[d.resultid] = parseInt(d.vote_count) || 0);
+        liveData = liveRaw.sort((a, b) => (parseInt(b.vote_count) || 0) - (parseInt(a.vote_count) || 0));
         
         // 原始資料排序
         liveData = liveRaw.sort((a, b) => (parseInt(b.vote_count) || 0) - (parseInt(a.vote_count) || 0));
@@ -166,36 +156,70 @@ function renderTable(data) {
     });
 }
 
-function renderMultiChart() {
+async function renderMultiChart() {
     const ctx = document.getElementById('multiTrendChart').getContext('2d');
     if (multiChart) multiChart.destroy();
-    elements.compareList.innerHTML = '';
-    const datasets = followList.map((id, index) => {
-        const work = liveData.find(d => d.resultid === id);
-        const history = (historyMap[id] || []).sort((a,b) => a.t - b.t);
-        const color = `hsl(${(index * 137) % 360}, 70%, 60%)`;
-        if (work) {
-            const tag = document.createElement('span'); tag.className = 'compare-tag'; tag.style.color = color; tag.style.borderColor = color; tag.innerText = work.rtitle;
-            elements.compareList.appendChild(tag);
-        }
-        return { label: work ? work.rtitle : id, data: history.map(h => ({ x: h.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), y: h.v })), borderColor: color, tension: 0.3, fill: false };
-    });
-    multiChart = new Chart(ctx, { type: 'line', data: { datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } } });
+    
+    elements.compareList.innerHTML = '<p>正在載入對比數據...</p>';
+    
+    try {
+        // 同時抓取所有關注作品的歷史紀錄
+        const promises = followList.map(id => fetch(`${HISTORY_API}?id=${id}`).then(res => res.json()));
+        const results = await Promise.all(promises);
+        
+        elements.compareList.innerHTML = '';
+        const datasets = followList.map((id, index) => {
+            const work = liveData.find(d => d.resultid === id);
+            const history = results[index].map(d => ({ 
+                x: new Date(d.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 
+                y: d.vote_count 
+            })).sort((a,b) => a.x - b.x);
+            
+            const color = `hsl(${(index * 137) % 360}, 70%, 60%)`;
+            if (work) {
+                const tag = document.createElement('span'); tag.className = 'compare-tag'; tag.style.color = color; tag.style.borderColor = color; tag.innerText = work.rtitle;
+                elements.compareList.appendChild(tag);
+            }
+            return { label: work ? work.rtitle : id, data: history, borderColor: color, tension: 0.3, fill: false };
+        });
+
+        multiChart = new Chart(ctx, { 
+            type: 'line', 
+            data: { datasets }, 
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { y: { beginAtZero: false } } 
+            } 
+        });
+    } catch (e) {
+        console.error('多線圖表加載失敗', e);
+        elements.compareList.innerHTML = '<p>數據加載失敗，請稍後再試。</p>';
+    }
 }
 
 async function showTrend(id, title) {
     elements.trendModal.style.display = 'flex';
     elements.modalTitle.innerText = title;
-    const history = (historyMap[id] || []).sort((a,b) => a.t - b.t);
-    const ctx = document.getElementById('trendChart').getContext('2d');
-    if (currentChart) currentChart.destroy();
-    currentChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: history.map(d => d.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})),
-            datasets: [{ label: '票數', data: history.map(d => d.v), borderColor: '#696cff', tension: 0.4 }]
-        }
-    });
+    try {
+        const res = await fetch(`${HISTORY_API}?id=${id}`);
+        const historyData = await res.json();
+        
+        const processedData = historyData.map(d => ({ 
+            t: new Date(d.created_at), 
+            v: d.vote_count 
+        })).sort((a,b) => a.t - b.t);
+
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        if (currentChart) currentChart.destroy();
+        currentChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: processedData.map(d => d.t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})),
+                datasets: [{ label: '票數', data: processedData.map(d => d.v), borderColor: '#696cff', tension: 0.4 }]
+            }
+        });
+    } catch (e) { console.error('圖表讀取失敗', e); }
 }
 function showLoader() { elements.loader.style.display = 'flex'; }
 function hideLoader() { elements.loader.style.display = 'none'; }

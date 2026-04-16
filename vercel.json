@@ -1,15 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/proxy.js", "use": "@vercel/node" },
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "style.css", "use": "@vercel/static" },
-    { "src": "app.js", "use": "@vercel/static" },
-    { "src": "data.json", "use": "@vercel/static" },
-    { "src": "prev_data.json", "use": "@vercel/static" },
-    { "src": "history.csv", "use": "@vercel/static" }
-  ],
   "rewrites": [
-    { "source": "/api/proxy", "destination": "api/proxy.js" }
+    { "source": "/api/proxy", "destination": "api/proxy.js" },
+    { "source": "/api/track", "destination": "api/track.js" },
+    { "source": "/api/history", "destination": "api/history.js" }
   ]
 }
