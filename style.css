@@ -540,6 +540,74 @@ footer {
     border: 1px solid rgba(105, 108, 255, 0.3);
 }
 
+.guide-header {
+    margin-bottom: 20px;
+}
+
+.guide-header h3 {
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+}
+
+.guide-header p {
+    color: var(--text-muted);
+}
+
+.vote-rule-note {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--primary);
+    border-radius: 8px;
+    background: rgba(105, 108, 255, 0.08);
+    color: var(--text-main);
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+}
+
+.guide-step {
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+}
+
+.guide-step-text {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+}
+
+.guide-step-text span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.guide-step-text p {
+    font-weight: 700;
+}
+
+.guide-step img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-top: 1px solid var(--glass-border);
+}
+
 /* 學校資訊樣式 */
 .work-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .school-tag {
@@ -553,6 +621,38 @@ footer {
     gap: 4px;
 }
 .school-tag i { font-size: 0.7rem; color: var(--primary); }
+
+.award-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.award-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-main);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.award-badge img {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+}
+
+.award-woman { border-color: rgba(255, 112, 166, 0.35); }
+.award-aboriginal { border-color: rgba(113, 221, 55, 0.35); }
+.award-newtaiwan { border-color: rgba(33, 150, 243, 0.35); }
 
 /* 組別專屬配色 */
 .group-tag.group-elementary { background: rgba(76, 175, 80, 0.1); color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }

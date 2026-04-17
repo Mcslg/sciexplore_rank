@@ -11,6 +11,7 @@ const elements = {
     groupFilter: document.getElementById('groupFilter'),
     fieldFilter: document.getElementById('fieldFilter'),
     sdgFilter: document.getElementById('sdgFilter'),
+    awardFilter: document.getElementById('awardFilter'),
     loader: document.getElementById('loader'),
     errorMsg: document.getElementById('error-msg'),
     trendModal: document.getElementById('trendModal'),
@@ -28,6 +29,12 @@ let followList = JSON.parse(localStorage.getItem('followList') || '[]');
 let currentChart = null;
 let multiChart = null;
 const votingDeadline = new Date('2026-05-05T23:59:00+08:00');
+const awardEligibleGroups = new Set(['國小組', '國中組', '普高組', '技高組']);
+const awardDefinitions = [
+    { id: 'woman', label: '女性桂冠', icon: 'woman.svg' },
+    { id: 'aboriginal', label: '科學勇士', icon: 'aboriginal.svg' },
+    { id: 'newtaiwan', label: '科學新秀', icon: 'newtaiwan.svg' }
+];
 
 window.onload = fetchData;
 updateCountdown();
@@ -37,6 +44,7 @@ elements.searchInput.addEventListener('input', applyFilters);
 elements.groupFilter.addEventListener('change', applyFilters);
 elements.fieldFilter.addEventListener('change', applyFilters);
 elements.sdgFilter.addEventListener('change', applyFilters);
+elements.awardFilter.addEventListener('change', applyFilters);
 elements.closeModal.onclick = () => elements.trendModal.style.display = 'none';
 
 function updateCountdown() {
@@ -118,6 +126,38 @@ function getSchoolName(item) {
     return schools.join('、') || '未提供';
 }
 
+function getStudents(item) {
+    const studentTeam = parseTeamJson(item.team_std || item[6]);
+    return Array.isArray(studentTeam?.std) ? studentTeam.std : [];
+}
+
+function getAwardIds(item) {
+    if (!awardEligibleGroups.has(item.rgroup)) return [];
+
+    const students = getStudents(item);
+    if (!students.length) return [];
+
+    const awards = [];
+    if (students.every(student => student.sex === '女生')) awards.push('woman');
+    if (students.some(student => student.identity === '原住民')) awards.push('aboriginal');
+    if (students.some(student => student.identity === '新二代')) awards.push('newtaiwan');
+    return awards;
+}
+
+function renderAwardBadges(item) {
+    const awardIds = getAwardIds(item);
+    if (!awardIds.length) return '';
+
+    return `<div class="award-badges">${awardDefinitions
+        .filter(award => awardIds.includes(award.id))
+        .map(award => `
+            <span class="award-badge award-${award.id}" title="${escapeHtml(award.label)}">
+                <img src="${award.icon}" alt="" aria-hidden="true">
+                ${escapeHtml(award.label)}
+            </span>
+        `).join('')}</div>`;
+}
+
 function getSnapshotValue(map, id, fallback) {
     if (map && Object.prototype.hasOwnProperty.call(map, id)) {
         return parseInt(map[id], 10) || 0;
@@ -160,6 +200,7 @@ function populateFilters() {
     renderFilterOptions(elements.groupFilter, '所有組別 (總排行)', [...new Set(liveData.map(d => d.rgroup).filter(Boolean))].sort());
     renderFilterOptions(elements.fieldFilter, '所有領域', getUniqueTags(liveData, 'rfield'));
     renderFilterOptions(elements.sdgFilter, '所有 SDGs', getUniqueTags(liveData, 'rsdg'));
+    renderFilterOptions(elements.awardFilter, '所有獎項標示', awardDefinitions.map(award => award.label));
 }
 
 function escapeHtml(value) {
@@ -263,11 +304,13 @@ function applyFilters() {
     const group = elements.groupFilter.value;
     const field = elements.fieldFilter.value;
     const sdg = elements.sdgFilter.value;
+    const award = elements.awardFilter.value;
     let rankBase = liveData.filter(d => {
         const groupMatched = group === 'all' || d.rgroup === group;
         const fieldMatched = field === 'all' || splitTags(d.rfield).includes(field);
         const sdgMatched = sdg === 'all' || splitTags(d.rsdg).includes(sdg);
-        return groupMatched && fieldMatched && sdgMatched;
+        const awardMatched = award === 'all' || getAwardIds(d).includes(awardDefinitions.find(def => def.label === award)?.id);
+        return groupMatched && fieldMatched && sdgMatched && awardMatched;
     });
     const rankedData = rankBase.map((item, index) => ({ ...item, tempRank: index + 1 }));
     const filtered = rankedData.filter(d => {
@@ -300,6 +343,7 @@ function renderTable(data) {
             <td>
                 <div class="work-info">
                     <span class="work-title">${escapeHtml(item.rtitle)}</span>
+                    ${renderAwardBadges(item)}
                     <div class="work-meta">
                         <span class="work-id"># ${escapeHtml(item.resultid)}</span>
                         <span class="school-tag"><i class="fas fa-school"></i> ${escapeHtml(schoolName)}</span>

@@ -10,7 +10,19 @@
     { "src": "apple-touch-icon.png", "use": "@vercel/static" },
     { "src": "robots.txt", "use": "@vercel/static" },
     { "src": "sitemap.xml", "use": "@vercel/static" },
-    { "src": "google679209b253db6033.html", "use": "@vercel/static" }
+    { "src": "google679209b253db6033.html", "use": "@vercel/static" },
+    { "src": "woman.svg", "use": "@vercel/static" },
+    { "src": "aboriginal.svg", "use": "@vercel/static" },
+    { "src": "newtaiwan.svg", "use": "@vercel/static" },
+    { "src": "1.png", "use": "@vercel/static" },
+    { "src": "2.png", "use": "@vercel/static" },
+    { "src": "3.png", "use": "@vercel/static" },
+    { "src": "4.png", "use": "@vercel/static" },
+    { "src": "5.png", "use": "@vercel/static" },
+    { "src": "6.png", "use": "@vercel/static" },
+    { "src": "7.png", "use": "@vercel/static" },
+    { "src": "8.png", "use": "@vercel/static" },
+    { "src": "9.png", "use": "@vercel/static" }
   ],
   "rewrites": [
     { "source": "/favicon.ico", "destination": "/favicon.png" },

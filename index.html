@@ -71,6 +71,9 @@
                 <button class="tab-btn" onclick="switchTab('compare')">
                     <i class="fas fa-chart-line"></i> 關注對比 (<span id="follow-count">0</span>)
                 </button>
+                <button class="tab-btn" onclick="switchTab('vote-guide')">
+                    <i class="fas fa-check-to-slot"></i> 投票方法
+                </button>
             </div>
         </header>
 
@@ -96,6 +99,11 @@
                         <option value="all">所有 SDGs</option>
                     </select>
                 </div>
+                <div class="filter-box">
+                    <select id="awardFilter" class="group-select">
+                        <option value="all">所有獎項標示</option>
+                    </select>
+                </div>
                 <button id="refreshBtn" class="refresh-button">
                     <i class="fas fa-sync-alt"></i> 重新載入
                 </button>
@@ -117,6 +125,57 @@
                     </thead>
                     <tbody id="rankingBody"></tbody>
                 </table>
+            </div>
+        </main>
+
+        <!-- 投票方法分頁 -->
+        <main id="vote-guide-view" class="tab-content" style="display: none;">
+            <div class="ranking-card">
+                <div class="guide-header">
+                    <h3>投票方法說明</h3>
+                    <p>照著步驟送出後才算完成投票。</p>
+                </div>
+                <div class="vote-rule-note">
+                    選擇你想投票的作品。一人在每一組有五票（除了教師組），一個作品只能投一票。
+                </div>
+                <div class="guide-grid">
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>1</span><p>按右上角請先登入以投票</p></div>
+                        <img src="1.png" alt="步驟1：按右上角請先登入以投票" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>2</span><p>選擇登入方式並登入</p></div>
+                        <img src="2.png" alt="步驟2：選擇登入方式並登入" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>3</span><p>按右上角投他一票</p></div>
+                        <img src="3.png" alt="步驟3：按右上角投他一票" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>4</span><p>記得按右下角我的票箱</p></div>
+                        <img src="4.png" alt="步驟4：記得按右下角我的票箱" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>5</span><p>前往送出投票</p></div>
+                        <img src="5.png" alt="步驟5：前往送出投票" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>6</span><p>勾選我不是機器人</p></div>
+                        <img src="6.png" alt="步驟6：勾選我不是機器人" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>7</span><p>按確定投票</p></div>
+                        <img src="7.png" alt="步驟7：按確定投票" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>8</span><p>按確定送出</p></div>
+                        <img src="8.png" alt="步驟8：按確定送出" loading="lazy">
+                    </article>
+                    <article class="guide-step">
+                        <div class="guide-step-text"><span>9</span><p>完成！</p></div>
+                        <img src="9.png" alt="步驟9：完成" loading="lazy">
+                    </article>
+                </div>
             </div>
         </main>
 
