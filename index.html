@@ -56,6 +56,11 @@
                     <span class="label">最後同步：</span>
                     <span id="update-time" class="value">--</span>
                 </div>
+                <div class="stat-item countdown-item">
+                    <span class="label">投票截止：</span>
+                    <span id="deadline-countdown" class="value">--</span>
+                    <span class="deadline-note">05月05日(週二) 23:59</span>
+                </div>
             </div>
             
             <!-- 分頁切換 -->
@@ -79,6 +84,16 @@
                 <div class="filter-box">
                     <select id="groupFilter" class="group-select">
                         <option value="all">所有組別</option>
+                    </select>
+                </div>
+                <div class="filter-box">
+                    <select id="fieldFilter" class="group-select">
+                        <option value="all">所有領域</option>
+                    </select>
+                </div>
+                <div class="filter-box">
+                    <select id="sdgFilter" class="group-select">
+                        <option value="all">所有 SDGs</option>
                     </select>
                 </div>
                 <button id="refreshBtn" class="refresh-button">
@@ -134,6 +149,7 @@
 
         <footer>
             <p>© 2026 科學探究競賽 排行榜系統</p>
+            <p class="support-note">請支持「蛤？義大利麵也能扯到結構力學？」</p>
         </footer>
     </div>
 

@@ -5,9 +5,12 @@ const elements = {
     rankingBody: document.getElementById('rankingBody'),
     totalWorks: document.getElementById('total-works'),
     updateTime: document.getElementById('update-time'),
+    deadlineCountdown: document.getElementById('deadline-countdown'),
     searchInput: document.getElementById('searchInput'),
     refreshBtn: document.getElementById('refreshBtn'),
     groupFilter: document.getElementById('groupFilter'),
+    fieldFilter: document.getElementById('fieldFilter'),
+    sdgFilter: document.getElementById('sdgFilter'),
     loader: document.getElementById('loader'),
     errorMsg: document.getElementById('error-msg'),
     trendModal: document.getElementById('trendModal'),
@@ -24,12 +27,33 @@ let historyMap = {};
 let followList = JSON.parse(localStorage.getItem('followList') || '[]');
 let currentChart = null;
 let multiChart = null;
+const votingDeadline = new Date('2026-05-05T23:59:00+08:00');
 
 window.onload = fetchData;
+updateCountdown();
+setInterval(updateCountdown, 1000);
 elements.refreshBtn.addEventListener('click', fetchData);
 elements.searchInput.addEventListener('input', applyFilters);
 elements.groupFilter.addEventListener('change', applyFilters);
+elements.fieldFilter.addEventListener('change', applyFilters);
+elements.sdgFilter.addEventListener('change', applyFilters);
 elements.closeModal.onclick = () => elements.trendModal.style.display = 'none';
+
+function updateCountdown() {
+    const diff = votingDeadline.getTime() - Date.now();
+    if (diff <= 0) {
+        elements.deadlineCountdown.innerText = '投票已截止';
+        return;
+    }
+
+    const totalSeconds = Math.floor(diff / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    elements.deadlineCountdown.innerText = `${days}天 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
 
 async function fetchData() {
     showLoader();
@@ -49,10 +73,7 @@ async function fetchData() {
 
         liveData = liveRaw.sort((a, b) => (parseInt(b.vote_count) || 0) - (parseInt(a.vote_count) || 0));
         
-        const groups = [...new Set(liveData.map(d => d.rgroup))].sort();
-        const currentSelection = elements.groupFilter.value;
-        elements.groupFilter.innerHTML = '<option value="all">所有組別 (總排行)</option>' + 
-            groups.map(g => `<option value="${g}" ${g===currentSelection?'selected':''}>${g}</option>`).join('');
+        populateFilters();
 
         elements.updateTime.innerText = new Date().toLocaleTimeString();
         updateFollowCount();
@@ -102,6 +123,43 @@ function getSnapshotValue(map, id, fallback) {
         return parseInt(map[id], 10) || 0;
     }
     return fallback;
+}
+
+function splitTags(value) {
+    return String(value || '')
+        .split(',')
+        .map(tag => tag.trim())
+        .map(normalizeTag)
+        .filter(Boolean);
+}
+
+function normalizeTag(tag) {
+    const replacements = {
+        '和平、': '和平、正義及健全制度',
+        '多元夥伴關': '多元夥伴關係',
+        '合適的工作及經濟成': '合適的工作及經濟成長'
+    };
+    return replacements[tag] || tag;
+}
+
+function getUniqueTags(items, key) {
+    return [...new Set(items.flatMap(item => splitTags(item[key])))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+}
+
+function renderFilterOptions(select, label, values) {
+    const currentSelection = select.value;
+    select.innerHTML = `<option value="all">${label}</option>` +
+        values.map(value => `<option value="${escapeHtml(value)}" ${value === currentSelection ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('');
+
+    if (currentSelection !== 'all' && !values.includes(currentSelection)) {
+        select.value = 'all';
+    }
+}
+
+function populateFilters() {
+    renderFilterOptions(elements.groupFilter, '所有組別 (總排行)', [...new Set(liveData.map(d => d.rgroup).filter(Boolean))].sort());
+    renderFilterOptions(elements.fieldFilter, '所有領域', getUniqueTags(liveData, 'rfield'));
+    renderFilterOptions(elements.sdgFilter, '所有 SDGs', getUniqueTags(liveData, 'rsdg'));
 }
 
 function escapeHtml(value) {
@@ -203,7 +261,14 @@ function generateSparkline(id, currentVotes) {
 function applyFilters() {
     const term = elements.searchInput.value.toLowerCase();
     const group = elements.groupFilter.value;
-    let rankBase = (group === 'all') ? liveData : liveData.filter(d => d.rgroup === group);
+    const field = elements.fieldFilter.value;
+    const sdg = elements.sdgFilter.value;
+    let rankBase = liveData.filter(d => {
+        const groupMatched = group === 'all' || d.rgroup === group;
+        const fieldMatched = field === 'all' || splitTags(d.rfield).includes(field);
+        const sdgMatched = sdg === 'all' || splitTags(d.rsdg).includes(sdg);
+        return groupMatched && fieldMatched && sdgMatched;
+    });
     const rankedData = rankBase.map((item, index) => ({ ...item, tempRank: index + 1 }));
     const filtered = rankedData.filter(d => {
         const schoolName = getSchoolName(d).toLowerCase();
