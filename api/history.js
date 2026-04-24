@@ -1,9 +1,4 @@
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(
-    'https://bazcoiuhgbgyyhfggjhv.supabase.co',
-    'sb_publishable_5AIk0L_JevietDyF9_7w1w_oHBLmIO9'
-);
+const supabase = require('./supabase-client');
 
 async function fetchAll(buildQuery) {
     const pageSize = 1000;
