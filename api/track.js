@@ -1,8 +1,6 @@
 const axios = require('axios');
 const { compactOldVotes } = require('./compact-utils');
 
-const supabase = require('./supabase-client');
-
 function getRequestSecret(req) {
     const authHeader = req.headers.authorization || '';
     const bearerPrefix = 'Bearer ';
@@ -27,6 +25,7 @@ module.exports = async (req, res) => {
     }
 
     try {
+        const supabase = require('./supabase-client');
         const response = await axios.post('https://sciexplore2026.colife.org.tw/work/prg/getWorkList.php', 'type=all', {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
