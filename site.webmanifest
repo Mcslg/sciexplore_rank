@@ -1,0 +1,25 @@
+{
+  "name": "2026 科學探究競賽即時票數排名",
+  "short_name": "科探排名",
+  "description": "非官方即時排行榜，整理 2026 這樣教我就懂科學探究競賽作品票數、排名變化與投票方法。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "zh-Hant-TW",
+  "icons": [
+    {
+      "src": "/favicon.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png?v=2",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
