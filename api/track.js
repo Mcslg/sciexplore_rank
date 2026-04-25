@@ -3,7 +3,29 @@ const { compactOldVotes } = require('./compact-utils');
 
 const supabase = require('./supabase-client');
 
+function getRequestSecret(req) {
+    const authHeader = req.headers.authorization || '';
+    const bearerPrefix = 'Bearer ';
+
+    if (authHeader.startsWith(bearerPrefix)) {
+        return authHeader.slice(bearerPrefix.length);
+    }
+
+    return req.query.secret;
+}
+
 module.exports = async (req, res) => {
+    const cronSecret = process.env.CRON_SECRET;
+    const requestSecret = getRequestSecret(req);
+
+    if (!cronSecret) {
+        return res.status(500).json({ error: 'Missing CRON_SECRET. Set it before exposing /api/track.' });
+    }
+
+    if (requestSecret !== cronSecret) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     try {
         const response = await axios.post('https://sciexplore2026.colife.org.tw/work/prg/getWorkList.php', 'type=all', {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
