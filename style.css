@@ -114,6 +114,10 @@ header h1 {
     color: var(--success);
 }
 
+.countdown-item .value.ended {
+    color: var(--gold);
+}
+
 .deadline-note {
     margin-top: 0.15rem;
     color: var(--text-muted);
@@ -126,6 +130,18 @@ header h1 {
     line-height: 1.6;
     margin: 0.85rem auto 0;
     max-width: 720px;
+}
+
+.voting-ended-note {
+    margin: 1rem auto 0;
+    max-width: 760px;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(253, 224, 71, 0.28);
+    border-radius: 8px;
+    background: rgba(253, 224, 71, 0.08);
+    color: var(--text-main);
+    font-weight: 700;
+    line-height: 1.6;
 }
 
 /* Ranking Card */

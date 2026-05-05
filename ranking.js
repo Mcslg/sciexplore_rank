@@ -51,9 +51,11 @@ function updateCountdown() {
     const diff = votingDeadline.getTime() - Date.now();
     if (diff <= 0) {
         elements.deadlineCountdown.innerText = '投票已截止';
+        elements.deadlineCountdown.classList.add('ended');
         return;
     }
 
+    elements.deadlineCountdown.classList.remove('ended');
     const totalSeconds = Math.floor(diff / 1000);
     const days = Math.floor(totalSeconds / 86400);
     const hours = Math.floor((totalSeconds % 86400) / 3600);
