@@ -1,10 +1,13 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/*.js", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "style.css", "use": "@vercel/static" },
     { "src": "ranking.js", "use": "@vercel/static" },
+    { "src": "data.json", "use": "@vercel/static" },
+    { "src": "archive/latest-results.json", "use": "@vercel/static" },
+    { "src": "archive/vote-history-compact.json", "use": "@vercel/static" },
+    { "src": "archive/archive-manifest.json", "use": "@vercel/static" },
     { "src": "icon.png", "use": "@vercel/static" },
     { "src": "favicon.png", "use": "@vercel/static" },
     { "src": "apple-touch-icon.png", "use": "@vercel/static" },
@@ -26,10 +29,6 @@
     { "src": "9.png", "use": "@vercel/static" }
   ],
   "rewrites": [
-    { "source": "/favicon.ico", "destination": "/favicon.png" },
-    { "source": "/api/proxy", "destination": "api/proxy.js" },
-    { "source": "/api/track", "destination": "api/track.js" },
-    { "source": "/api/compact", "destination": "api/compact.js" },
-    { "source": "/api/history", "destination": "api/history.js" }
+    { "source": "/favicon.ico", "destination": "/favicon.png" }
   ]
 }

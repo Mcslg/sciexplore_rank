@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-05-05T23:36:31.989Z",
+  "source_table": "votes",
+  "total_rows": 598620,
+  "total_works": 1104,
+  "files": {
+    "latest_results": "latest-results.json",
+    "history_manifest": "history-manifest.json",
+    "history_dir": "history/"
+  }
+}

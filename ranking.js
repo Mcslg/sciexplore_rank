@@ -1,5 +1,6 @@
-const API_URL = '/api/proxy';
-const HISTORY_API = '/api/history';
+const WORKS_DATA_URL = '/data.json';
+const LATEST_RESULTS_URL = '/archive/latest-results.json';
+const HISTORY_ARCHIVE_URL = '/archive/vote-history-compact.json';
 
 const elements = {
     rankingBody: document.getElementById('rankingBody'),
@@ -25,6 +26,7 @@ let liveData = [];
 let dataMap15 = {};   // 15m 前
 let dataMap30 = {};   // 30m 前
 let historyMap = {}; 
+let historyArchive = null;
 let followList = JSON.parse(localStorage.getItem('followList') || '[]');
 let currentChart = null;
 let multiChart = null;
@@ -68,24 +70,24 @@ function updateCountdown() {
 async function fetchData() {
     showLoader();
     try {
-        const [resLive, resSnap, resSpark] = await Promise.allSettled([
-            fetch(API_URL),
-            fetch(`${HISTORY_API}?mode=snapshot`),
-            fetch(`${HISTORY_API}?mode=sparkline`)
+        const [resWorks, resLatest, resHistory] = await Promise.allSettled([
+            fetch(WORKS_DATA_URL),
+            fetch(LATEST_RESULTS_URL),
+            fetch(HISTORY_ARCHIVE_URL)
         ]);
 
-        const liveRaw = (resLive.status === 'fulfilled' && resLive.value.ok) ? await resLive.value.json() : [];
-        const snapRaw = (resSnap.status === 'fulfilled' && resSnap.value.ok) ? await resSnap.value.json() : { snapshot15: {}, snapshot30: {} };
-        historyMap = (resSpark.status === 'fulfilled' && resSpark.value.ok) ? await resSpark.value.json() : {};
+        const worksRaw = (resWorks.status === 'fulfilled' && resWorks.value.ok) ? await resWorks.value.json() : [];
+        const latestRaw = (resLatest.status === 'fulfilled' && resLatest.value.ok) ? await resLatest.value.json() : [];
+        historyArchive = (resHistory.status === 'fulfilled' && resHistory.value.ok) ? await resHistory.value.json() : { histories: {} };
 
-        dataMap15 = snapRaw.snapshot15;
-        dataMap30 = snapRaw.snapshot30;
-
-        liveData = liveRaw.sort((a, b) => (parseInt(b.vote_count) || 0) - (parseInt(a.vote_count) || 0));
+        liveData = mergeArchivedWorks(worksRaw, latestRaw);
+        dataMap15 = buildSnapshotMap(15);
+        dataMap30 = buildSnapshotMap(30);
+        historyMap = buildSparklineMap();
         
         populateFilters();
 
-        elements.updateTime.innerText = new Date().toLocaleTimeString();
+        elements.updateTime.innerText = formatArchiveUpdateTime(latestRaw);
         updateFollowCount();
         applyFilters();
     } catch (e) {
@@ -94,6 +96,108 @@ async function fetchData() {
     } finally {
         hideLoader();
     }
+}
+
+function normalizeWork(item) {
+    return {
+        ...item,
+        resultid: item.resultid || item[0],
+        rtitle: item.rtitle || item[1],
+        rgroup: item.rgroup || item[2],
+        rfield: item.rfield || item[3],
+        rsdg: item.rsdg || item[4],
+        team_teacher: item.team_teacher || item[5],
+        team_std: item.team_std || item[6],
+        vote_count: parseInt(item.vote_count, 10) || 0
+    };
+}
+
+function mergeArchivedWorks(worksRaw, latestRaw) {
+    const worksById = new Map((worksRaw || []).map(item => {
+        const normalized = normalizeWork(item);
+        return [normalized.resultid, normalized];
+    }));
+
+    const latestById = new Map((latestRaw || []).map(item => [item.resultid, item]));
+    const ids = new Set([...worksById.keys(), ...latestById.keys()]);
+
+    return [...ids]
+        .map(id => {
+            const work = worksById.get(id) || {};
+            const latest = latestById.get(id) || {};
+            return {
+                ...work,
+                ...latest,
+                resultid: id,
+                rtitle: latest.rtitle || work.rtitle || id,
+                rgroup: latest.rgroup || work.rgroup || '未分組',
+                vote_count: parseInt(latest.vote_count ?? work.vote_count, 10) || 0
+            };
+        })
+        .sort((a, b) => (parseInt(b.vote_count) || 0) - (parseInt(a.vote_count) || 0));
+}
+
+function getArchiveReferenceTime() {
+    const times = liveData
+        .map(item => new Date(item.created_at).getTime())
+        .filter(time => !Number.isNaN(time));
+    return times.length ? Math.max(...times) : Date.now();
+}
+
+function getHistoryPoints(id) {
+    return historyArchive?.histories?.[id] || [];
+}
+
+function getVoteAtOrBefore(points, targetTime, fallback) {
+    let current = null;
+
+    points.forEach(point => {
+        const pointTime = point[0] * 1000;
+        if (pointTime <= targetTime) current = point[1];
+    });
+
+    if (current !== null) return parseInt(current, 10) || 0;
+    return fallback;
+}
+
+function buildSnapshotMap(minutesAgo) {
+    const targetTime = getArchiveReferenceTime() - minutesAgo * 60 * 1000;
+    return liveData.reduce((map, item) => {
+        const currentVotes = parseInt(item.vote_count, 10) || 0;
+        map[item.resultid] = getVoteAtOrBefore(getHistoryPoints(item.resultid), targetTime, currentVotes);
+        return map;
+    }, {});
+}
+
+function buildSparklineMap() {
+    return liveData.reduce((map, item) => {
+        const points = getHistoryPoints(item.resultid);
+        map[item.resultid] = points.map(point => point[1]).slice(-10);
+        return map;
+    }, {});
+}
+
+function getArchivedHistoryData(id) {
+    return getHistoryPoints(id)
+        .map(point => ({
+            vote_count: point[1],
+            created_at: new Date(point[0] * 1000).toISOString()
+        }));
+}
+
+function formatArchiveUpdateTime(latestRaw) {
+    const times = (latestRaw || [])
+        .map(item => new Date(item.created_at).getTime())
+        .filter(time => !Number.isNaN(time));
+
+    if (!times.length) return '封存資料';
+
+    return new Date(Math.max(...times)).toLocaleString([], {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 function getGroupColorClass(group) {
@@ -405,8 +509,7 @@ async function renderMultiChart() {
     }
     elements.compareList.innerHTML = '<p>載入對比中...</p>';
     try {
-        const promises = followList.map(id => fetch(`${HISTORY_API}?id=${id}`).then(res => res.json()));
-        const results = await Promise.all(promises);
+        const results = followList.map(id => getArchivedHistoryData(id));
         elements.compareList.innerHTML = '';
         const datasets = followList.map((id, index) => {
             const work = liveData.find(d => d.resultid === id);
@@ -441,9 +544,7 @@ async function showTrend(id, title) {
             setChartStatus('trendChartStatus', '圖表套件載入失敗，請重新整理頁面。');
             return;
         }
-        const res = await fetch(`${HISTORY_API}?id=${id}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const historyData = await res.json();
+        const historyData = getArchivedHistoryData(id);
         const processed = historyData
             .map(d => ({ t: parseHistoryTime(d), v: parseInt(d.vote_count, 10) || 0 }))
             .filter(d => !Number.isNaN(d.t.getTime()))

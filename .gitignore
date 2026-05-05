@@ -1,1 +1,4 @@
 node_modules
+.env
+archive/history/
+archive/history-manifest.json
